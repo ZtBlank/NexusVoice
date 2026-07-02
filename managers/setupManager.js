@@ -1,54 +1,115 @@
-const fs = require("fs");
-const path = require("path");
+const {
+    ActionRowBuilder,
+    StringSelectMenuBuilder,
+    StringSelectMenuOptionBuilder,
+    EmbedBuilder,
+    ChannelType
+} = require("discord.js");
 
-const CONFIG_PATH = path.join(__dirname, "..", "config", "jtc.json");
+const setupCache = new Map();
 
-function loadConfig() {
+async function startCreateWizard(interaction) {
 
-    if (!fs.existsSync(CONFIG_PATH)) {
+    const voiceChannels = interaction.guild.channels.cache
+        .filter(c => c.type === ChannelType.GuildVoice)
+        .sort((a, b) => a.position - b.position);
 
-        fs.writeFileSync(
-            CONFIG_PATH,
-            JSON.stringify({ guilds: {} }, null, 4)
+    const menu = new StringSelectMenuBuilder()
+        .setCustomId("setup_select_join_channel")
+        .setPlaceholder("Select the Join-to-Create voice channel");
+
+    voiceChannels.forEach(channel => {
+
+        menu.addOptions(
+            new StringSelectMenuOptionBuilder()
+                .setLabel(channel.name)
+                .setValue(channel.id)
         );
 
-    }
+    });
 
-    return JSON.parse(fs.readFileSync(CONFIG_PATH));
+    await interaction.update({
+
+        embeds: [
+
+            new EmbedBuilder()
+                .setColor(0x5865F2)
+                .setTitle("⚙️ Nexus Voice Setup")
+                .setDescription(
+                    "**Step 1 / 4**\n\nSelect the Join-to-Create voice channel."
+                )
+
+        ],
+
+        components: [
+
+            new ActionRowBuilder()
+                .addComponents(menu)
+
+        ]
+
+    });
 
 }
 
-function saveConfig(data) {
+async function selectJoinChannel(interaction) {
 
-    fs.writeFileSync(
-        CONFIG_PATH,
-        JSON.stringify(data, null, 4)
-    );
+    setupCache.set(interaction.user.id, {
 
-}
+        joinChannel: interaction.values[0]
 
-function createGuild(guildId) {
+    });
 
-    const config = loadConfig();
+    const categories = interaction.guild.channels.cache
+        .filter(c => c.type === ChannelType.GuildCategory)
+        .sort((a, b) => a.position - b.position);
 
-    if (!config.guilds[guildId]) {
+    const menu = new StringSelectMenuBuilder()
+        .setCustomId("setup_select_category")
+        .setPlaceholder("Select the category");
 
-        config.guilds[guildId] = {
-            joinToCreate: []
-        };
+    categories.forEach(category => {
 
-        saveConfig(config);
+        menu.addOptions(
 
-    }
+            new StringSelectMenuOptionBuilder()
+                .setLabel(category.name)
+                .setValue(category.id)
 
-    return config;
+        );
+
+    });
+
+    await interaction.update({
+
+        embeds: [
+
+            new EmbedBuilder()
+                .setColor(0x5865F2)
+                .setTitle("⚙️ Nexus Voice Setup")
+                .setDescription(
+                    "**Step 2 / 4**\n\nSelect the category where temporary channels will be created."
+                )
+
+        ],
+
+        components: [
+
+            new ActionRowBuilder()
+                .addComponents(menu)
+
+        ]
+
+    });
 
 }
 
 module.exports = {
 
-    loadConfig,
-    saveConfig,
-    createGuild
+    setupCache,
+
+    startCreateWizard,
+
+    selectJoinChannel
 
 };

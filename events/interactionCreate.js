@@ -1,10 +1,4 @@
-const {
-    ActionRowBuilder,
-    StringSelectMenuBuilder,
-    StringSelectMenuOptionBuilder,
-    EmbedBuilder,
-    ChannelType
-} = require("discord.js");
+const setupManager = require("../managers/setupManager");
 
 module.exports = {
 
@@ -12,10 +6,7 @@ module.exports = {
 
     async execute(interaction, client) {
 
-        // ============================
         // Slash Commands
-        // ============================
-
         if (interaction.isChatInputCommand()) {
 
             const command = client.commands.get(interaction.commandName);
@@ -26,107 +17,63 @@ module.exports = {
 
         }
 
-        // ============================
-        // Dropdown Menus
-        // ============================
+        // Dropdowns
+        if (interaction.isStringSelectMenu()) {
 
-        if (!interaction.isStringSelectMenu()) return;
+            // Main setup menu
+            if (interaction.customId === "setup_action") {
 
-        // --------------------------------
-        // Main Setup Menu
-        // --------------------------------
+                switch (interaction.values[0]) {
 
-        if (interaction.customId === "setup_action") {
+                    case "create":
+                        return setupManager.startCreateWizard(interaction);
 
-            const selected = interaction.values[0];
+                    case "edit":
+                        return interaction.reply({
+                            content: "🚧 Coming soon.",
+                            ephemeral: true
+                        });
 
-            if (selected !== "create") {
+                    case "remove":
+                        return interaction.reply({
+                            content: "🚧 Coming soon.",
+                            ephemeral: true
+                        });
 
-                return interaction.update({
+                }
 
-                    embeds: [
+            }
 
-                        new EmbedBuilder()
-                            .setColor(0x2b2d31)
-                            .setTitle("🚧 Coming Soon")
-                            .setDescription(
-                                `**${selected}** will be available in the next update.`
-                            )
+            // Step 1
+            if (interaction.customId === "setup_select_join_channel") {
 
-                    ],
+                return setupManager.selectJoinChannel(interaction);
 
-                    components: []
+            }
+
+            // Step 2
+            if (interaction.customId === "setup_select_category") {
+
+                console.log("Category:", interaction.values[0]);
+
+                return interaction.reply({
+
+                    content:
+                        "✅ Category saved.\n\nNext version will ask for the default channel name.",
+
+                    ephemeral: true
 
                 });
 
             }
 
-            // ============================
-            // STEP 1
-            // Select Join Channel
-            // ============================
-
-            const voiceChannels = interaction.guild.channels.cache
-                .filter(channel => channel.type === ChannelType.GuildVoice);
-
-            const menu = new StringSelectMenuBuilder()
-                .setCustomId("setup_join_channel")
-                .setPlaceholder("Select a Join-to-Create voice channel");
-
-            voiceChannels
-                .first(25)
-                .forEach(channel => {
-
-                    menu.addOptions(
-
-                        new StringSelectMenuOptionBuilder()
-                            .setLabel(channel.name)
-                            .setValue(channel.id)
-
-                    );
-
-                });
-
-            return interaction.update({
-
-                embeds: [
-
-                    new EmbedBuilder()
-                        .setColor(0x5865F2)
-                        .setTitle("Step 1 / 3")
-                        .setDescription(
-                            "Select the voice channel that members will join."
-                        )
-
-                ],
-
-                components: [
-
-                    new ActionRowBuilder()
-                        .addComponents(menu)
-
-                ]
-
-            });
-
         }
 
-        // --------------------------------
-        // Step 1 selected
-        // --------------------------------
+        // Buttons
+        if (interaction.isButton()) return;
 
-        if (interaction.customId === "setup_join_channel") {
-
-            return interaction.reply({
-
-                content:
-                    "✅ Voice channel selected.\n\n(Category selection comes next in v0.2 Part 2.)",
-
-                ephemeral: true
-
-            });
-
-        }
+        // Modals
+        if (interaction.isModalSubmit()) return;
 
     }
 
